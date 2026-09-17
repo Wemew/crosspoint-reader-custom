@@ -7,6 +7,10 @@ on:
       - '**'
     tags-ignore:
       - '**'
+env:
+  PLATFORMIO_DISABLE_UPDATE_CHECK: "true"
+  UV_CONSTRAINT: /tmp/constraints.txt
+  PIP_CONSTRAINT: /tmp/constraints.txt
 
 jobs:
   build:
@@ -38,9 +42,8 @@ jobs:
 
       - name: Install PlatformIO Core
         run: |
-          # Keep Core aligned with the version pioarduino expects so custom_sdkconfig
-          # builds don't self-upgrade PlatformIO mid-run.
-          uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.2.0.zip
+          echo "pioarduino==6.1.19" > /tmp/constraints.txt
+          uv pip install --system -U https://github.com/pioarduino/platformio-core/archive/refs/tags/v6.1.19.zip
           uv pip install --system -U "littlefs-python>=0.16.0" "fatfs-ng>=0.1.14" "pyyaml>=6.0.2" \
             "rich-click>=1.8.6" "zopfli>=0.2.2" "intelhex>=2.3.0" "rich>=14.0.0" "urllib3<2" \
             "cryptography>=45.0.3" "certifi>=2025.8.3" "ecdsa>=0.19.1" "bitstring>=4.3.1" \
