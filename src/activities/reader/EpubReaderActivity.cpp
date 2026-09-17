@@ -953,6 +953,7 @@ bool EpubReaderActivity::launchKOReaderSync() {
   const int tocIdx = epub->getTocIndexForSpineIndex(currentSpineIndex);
   std::string localChapterName = (tocIdx >= 0) ? epub->getTocItem(tocIdx).title : "";
   const std::string savedEpubPath = epub->getPath();
+  const std::string savedTitle = epub ? epub->getTitle() : "";
 
   if (!saveProgress(currentSpineIndex, currentPage, totalPages)) {
     LOG_ERR("KOSync", "Aborting sync because current progress could not be saved");
@@ -973,7 +974,6 @@ bool EpubReaderActivity::launchKOReaderSync() {
     if (auto* fcm = renderer.getFontCacheManager()) {
       fcm->releaseSdFontCaches();
     }
-    std::string savedTitle = epub ? epub->getTitle() : "";
     // No rendering may run while the chapter mapper borrows the framebuffer.
     {
       GfxRenderer::FrameBufferLoan loan(renderer);
