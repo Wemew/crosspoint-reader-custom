@@ -177,7 +177,7 @@ void KOReaderSyncActivity::performSync() {
   }
   const std::string primaryHash = documentHash;
 
-  LOG_DBG("KOSync", "Document hash (%s): %s", matchMethodName(primaryMethod), documentHash.c_str());
+  LOG_INF("KOSync", "Document hash (%s): %s", matchMethodName(primaryMethod), documentHash.c_str());
 
   {
     RenderLock lock(*this);
@@ -188,7 +188,7 @@ void KOReaderSyncActivity::performSync() {
   // Fetch remote progress. In smart mode, retain the alternate document-id
   // record until both records can be mapped after the Epub is reloaded.
   auto result = KOReaderSyncClient::getProgress(documentHash, remoteProgress);
-  LOG_DBG("KOSync", "Primary remote (%s): result=%d http=%d doc=%s local=%.6f remote=%.6f xpath=%s",
+  LOG_INF("KOSync", "Primary remote (%s): result=%d http=%d doc=%s local=%.6f remote=%.6f xpath=%s",
           matchMethodName(primaryMethod), result, KOReaderSyncClient::lastHttpCode, documentHash.c_str(),
           localProgress.percentage, remoteProgress.percentage, remoteProgress.progress.c_str());
 
@@ -593,7 +593,19 @@ void KOReaderSyncActivity::buildResultScreen(UiScreen& screen) {
     centeredBold.bold = true;
     const int16_t lineH = screen.target().lineHeight(centered.font);
     screen.target().text(screen.takeTop(lineH, screen.theme().spaceSm), tr(STR_NO_REMOTE_MSG), centeredBold);
-    screen.target().text(screen.takeTop(lineH, screen.theme().spaceMd), tr(STR_UPLOAD_PROMPT), centered);
+    screen.target().text(screen.takeTop(lineH, screen.theme().spaceSm), tr(STR_UPLOAD_PROMPT), centered);
+
+    auto smallStyle = screen.theme().smallText;
+    smallStyle.align = fui::TextAlign::Center;
+    const int16_t smallH = screen.target().lineHeight(smallStyle.font);
+    char infoBuf[128];
+    const auto method = KOREADER_STORE.getMatchMethod();
+    if (method == DocumentMatchMethod::TITLE && !bookTitle.empty()) {
+      snprintf(infoBuf, sizeof(infoBuf), "[Title: %.28s] %.8s...", bookTitle.c_str(), documentHash.c_str());
+    } else {
+      snprintf(infoBuf, sizeof(infoBuf), "[%s] %.8s...", matchMethodName(method), documentHash.c_str());
+    }
+    screen.target().text(screen.takeTop(smallH, screen.theme().spaceMd), infoBuf, smallStyle);
 
     // Single themed action row anchored to the bottom, matching the lists used
     // everywhere else (inherits the theme's row radius + selection style).

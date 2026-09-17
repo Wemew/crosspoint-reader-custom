@@ -35,17 +35,35 @@ std::string KOReaderDocumentId::calculateFromFilename(const std::string& filePat
   md5.calculate();
 
   std::string result = md5.toString().c_str();
-  LOG_DBG("KODoc", "Filename hash: %s (from '%s')", result.c_str(), filename.c_str());
+  LOG_INF("KODoc", "Filename hash: %s (from '%s')", result.c_str(), filename.c_str());
   return result;
 }
 
 std::string KOReaderDocumentId::calculateFromTitle(const std::string& title) {
-  const std::string trimmed = trim(title);
-  if (trimmed.empty()) {
+  // Collapse whitespace runs [ \t\r\n]+ into a single ' ' and trim
+  std::string clean;
+  clean.reserve(title.size());
+  bool inSpace = false;
+  for (const char c : title) {
+    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+      if (!inSpace && !clean.empty()) {
+        clean.push_back(' ');
+      }
+      inSpace = true;
+    } else {
+      clean.push_back(c);
+      inSpace = false;
+    }
+  }
+  if (!clean.empty() && clean.back() == ' ') {
+    clean.pop_back();
+  }
+
+  if (clean.empty()) {
     return "";
   }
 
-  std::string nfc = utf8ComposeNfc(trimmed);
+  std::string nfc = utf8ComposeNfc(clean);
   for (char& c : nfc) {
     if (c >= 'A' && c <= 'Z') {
       c = static_cast<char>(c + ('a' - 'A'));
@@ -58,7 +76,7 @@ std::string KOReaderDocumentId::calculateFromTitle(const std::string& title) {
   md5.calculate();
 
   std::string result = md5.toString().c_str();
-  LOG_DBG("KODoc", "Title hash: %s (from '%s')", result.c_str(), nfc.c_str());
+  LOG_INF("KODoc", "Title hash: %s (from '%s')", result.c_str(), nfc.c_str());
   return result;
 }
 
