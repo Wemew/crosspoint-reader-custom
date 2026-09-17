@@ -32,16 +32,29 @@ namespace {
 // disambiguates them in the handler.
 constexpr fui::ActionId ACTION_ROW = 1;
 
-std::string calculateDocumentHashForMethod(const std::string& path, const DocumentMatchMethod method) {
+std::string calculateDocumentHashForMethod(const std::string& path, const std::string& title,
+                                           const DocumentMatchMethod method) {
+  if (method == DocumentMatchMethod::TITLE) {
+    if (!title.empty()) {
+      return KOReaderDocumentId::calculateFromTitle(title);
+    }
+    return "";
+  }
   return method == DocumentMatchMethod::FILENAME ? KOReaderDocumentId::calculateFromFilename(path)
                                                  : KOReaderDocumentId::calculate(path);
 }
 
 DocumentMatchMethod alternateMatchMethod(const DocumentMatchMethod method) {
+  if (method == DocumentMatchMethod::TITLE) {
+    return DocumentMatchMethod::FILENAME;
+  }
   return method == DocumentMatchMethod::FILENAME ? DocumentMatchMethod::BINARY : DocumentMatchMethod::FILENAME;
 }
 
 const char* matchMethodName(const DocumentMatchMethod method) {
+  if (method == DocumentMatchMethod::TITLE) {
+    return "title";
+  }
   return method == DocumentMatchMethod::FILENAME ? "filename" : "binary";
 }
 
@@ -49,7 +62,8 @@ const char* matchMethodName(const DocumentMatchMethod method) {
 
 KOReaderSyncActivity::KOReaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                            const std::string& epubPath, CrossPointPosition localPosition,
-                                           SavedProgressPosition localKoPos, std::string localChapterName)
+                                           SavedProgressPosition localKoPos, std::string localChapterName,
+                                           std::string bookTitle)
     : Activity("KOReaderSync", renderer, mappedInput),
       UiAppHost(renderer),
       epubPath(epubPath),
@@ -57,7 +71,8 @@ KOReaderSyncActivity::KOReaderSyncActivity(GfxRenderer& renderer, MappedInputMan
       localPosition(localPosition),
       remoteProgress{},
       remotePosition{},
-      localProgress(std::move(localKoPos)) {}
+      localProgress(std::move(localKoPos)),
+      bookTitle(std::move(bookTitle)) {}
 
 void KOReaderSyncActivity::ensureEpubLoaded() {
   if (!epub) {
@@ -139,12 +154,22 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
 
 void KOReaderSyncActivity::performSync() {
   const DocumentMatchMethod primaryMethod = KOREADER_STORE.getMatchMethod();
-  documentHash = calculateDocumentHashForMethod(epubPath, primaryMethod);
+  // Fallback: If title is empty and primary method is TITLE, try loading title from metadata cache
+  if (bookTitle.empty() && primaryMethod == DocumentMatchMethod::TITLE && FsHelpers::hasEpubExtension(epubPath)) {
+    Epub epubMeta(epubPath, "/.crosspoint");
+    if (epubMeta.load(/*buildIfMissing=*/false, /*skipLoadingCss=*/true)) {
+      bookTitle = epubMeta.getTitle();
+    }
+  }
+
+  documentHash = calculateDocumentHashForMethod(epubPath, bookTitle, primaryMethod);
   if (documentHash.empty()) {
     {
       RenderLock lock(*this);
       state = SYNC_FAILED;
-      statusMessage = tr(STR_HASH_FAILED);
+      statusMessage = (primaryMethod == DocumentMatchMethod::TITLE && bookTitle.empty())
+                          ? tr(STR_NO_TITLE_METADATA)
+                          : tr(STR_HASH_FAILED);
     }
     requestUpdate(true);
     return;
@@ -170,7 +195,7 @@ void KOReaderSyncActivity::performSync() {
   bool hasAlternateProgress = false;
   if (smartSyncEnabled()) {
     const DocumentMatchMethod altMethod = alternateMatchMethod(primaryMethod);
-    const std::string altHash = calculateDocumentHashForMethod(epubPath, altMethod);
+    const std::string altHash = calculateDocumentHashForMethod(epubPath, bookTitle, altMethod);
     if (!altHash.empty() && altHash != documentHash) {
       KOReaderProgress altProgress;
       const auto altResult = KOReaderSyncClient::getProgress(altHash, altProgress);
@@ -429,9 +454,7 @@ void KOReaderSyncActivity::chooseResultOption() {
 
 void KOReaderSyncActivity::startUpload() {
   if (documentHash.empty()) {
-    documentHash = KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME
-                       ? KOReaderDocumentId::calculateFromFilename(epubPath)
-                       : KOReaderDocumentId::calculate(epubPath);
+    documentHash = calculateDocumentHashForMethod(epubPath, bookTitle, KOREADER_STORE.getMatchMethod());
   }
   performUpload();
 }

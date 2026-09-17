@@ -76,10 +76,16 @@ void KOReaderSettingsActivity::activateIndex(const int index) {
                              }
                            });
   } else if (index == 3) {
-    // Document Matching - toggle between Filename and Binary
+    // Document Matching - cycle between Filename, Binary, and Title
     const auto current = KOREADER_STORE.getMatchMethod();
-    const auto newMethod =
-        (current == DocumentMatchMethod::FILENAME) ? DocumentMatchMethod::BINARY : DocumentMatchMethod::FILENAME;
+    DocumentMatchMethod newMethod = DocumentMatchMethod::FILENAME;
+    if (current == DocumentMatchMethod::FILENAME) {
+      newMethod = DocumentMatchMethod::BINARY;
+    } else if (current == DocumentMatchMethod::BINARY) {
+      newMethod = DocumentMatchMethod::TITLE;
+    } else {
+      newMethod = DocumentMatchMethod::FILENAME;
+    }
     KOREADER_STORE.setMatchMethod(newMethod);
     KOREADER_STORE.saveToFile();
     requestUpdate();
@@ -143,8 +149,10 @@ void KOReaderSettingsActivity::buildScreen(UiScreen& screen) {
         rowValues_[i] = std::string(tr(STR_DEFAULT_VALUE)) + ": " + defaultUrl;
       }
     } else if (i == 3) {
-      rowValues_[i] =
-          KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME ? tr(STR_FILENAME) : tr(STR_BINARY);
+      const auto method = KOREADER_STORE.getMatchMethod();
+      rowValues_[i] = (method == DocumentMatchMethod::FILENAME) ? tr(STR_FILENAME)
+                      : (method == DocumentMatchMethod::BINARY)  ? tr(STR_BINARY)
+                                                                 : tr(STR_TITLE);
     } else if (i == 4) {
       rowValues_[i] = KOREADER_STORE.getSendMetadata() ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     } else if (i == 5) {

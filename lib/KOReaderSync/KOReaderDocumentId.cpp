@@ -3,6 +3,7 @@
 #include <HalStorage.h>
 #include <Logging.h>
 #include <MD5Builder.h>
+#include <Utf8.h>
 
 namespace {
 // Extract filename from path (everything after last '/')
@@ -12,6 +13,13 @@ std::string getFilename(const std::string& path) {
     return path;
   }
   return path.substr(pos + 1);
+}
+
+std::string trim(const std::string& str) {
+  const size_t first = str.find_first_not_of(" \t\n\r");
+  if (first == std::string::npos) return "";
+  const size_t last = str.find_last_not_of(" \t\n\r");
+  return str.substr(first, (last - first + 1));
 }
 }  // namespace
 
@@ -28,6 +36,29 @@ std::string KOReaderDocumentId::calculateFromFilename(const std::string& filePat
 
   std::string result = md5.toString().c_str();
   LOG_DBG("KODoc", "Filename hash: %s (from '%s')", result.c_str(), filename.c_str());
+  return result;
+}
+
+std::string KOReaderDocumentId::calculateFromTitle(const std::string& title) {
+  const std::string trimmed = trim(title);
+  if (trimmed.empty()) {
+    return "";
+  }
+
+  std::string nfc = utf8ComposeNfc(trimmed);
+  for (char& c : nfc) {
+    if (c >= 'A' && c <= 'Z') {
+      c = static_cast<char>(c + ('a' - 'A'));
+    }
+  }
+
+  MD5Builder md5;
+  md5.begin();
+  md5.add(nfc.c_str());
+  md5.calculate();
+
+  std::string result = md5.toString().c_str();
+  LOG_DBG("KODoc", "Title hash: %s (from '%s')", result.c_str(), nfc.c_str());
   return result;
 }
 

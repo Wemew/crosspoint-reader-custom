@@ -33,6 +33,15 @@ class KOReaderDocumentId {
    */
   static std::string calculateFromFilename(const std::string& filePath);
 
+  /**
+   * Calculate document hash from metadata title only (title-based sync mode).
+   * Matches books across different filenames/formats by book title.
+   *
+   * @param title The metadata title of the book
+   * @return 32-character lowercase hex MD5 of the normalized title
+   */
+  static std::string calculateFromTitle(const std::string& title);
+
  private:
   // Size of each chunk to read at each offset
   static constexpr size_t CHUNK_SIZE = 1024;

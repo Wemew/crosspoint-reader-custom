@@ -51,7 +51,7 @@ bool KOReaderCredentialStore::fromJson(JsonVariantConst doc) {
   }
 
   uint8_t method = doc["matchMethod"] | (uint8_t)0;
-  if (method <= static_cast<uint8_t>(DocumentMatchMethod::BINARY)) {
+  if (method <= static_cast<uint8_t>(DocumentMatchMethod::TITLE)) {
     setMatchMethod(static_cast<DocumentMatchMethod>(method));
   } else {
     LOG_DBG("KRS", "Invalid matchMethod %u in JSON, resetting to FILENAME", method);
@@ -136,7 +136,13 @@ bool KOReaderCredentialStore::usesCrossPointSyncServer() const { return getBaseU
 
 void KOReaderCredentialStore::setMatchMethod(DocumentMatchMethod method) {
   matchMethod = method;
-  LOG_DBG("KRS", "Set match method: %s", method == DocumentMatchMethod::FILENAME ? "Filename" : "Binary");
+  const char* name = "Filename";
+  if (method == DocumentMatchMethod::BINARY) {
+    name = "Binary";
+  } else if (method == DocumentMatchMethod::TITLE) {
+    name = "Title";
+  }
+  LOG_DBG("KRS", "Set match method: %s", name);
 }
 
 void KOReaderCredentialStore::setSendMetadata(bool enabled) {

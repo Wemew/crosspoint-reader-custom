@@ -973,6 +973,7 @@ bool EpubReaderActivity::launchKOReaderSync() {
     if (auto* fcm = renderer.getFontCacheManager()) {
       fcm->releaseSdFontCaches();
     }
+    std::string savedTitle = epub ? epub->getTitle() : "";
     // No rendering may run while the chapter mapper borrows the framebuffer.
     {
       GfxRenderer::FrameBufferLoan loan(renderer);
@@ -983,7 +984,8 @@ bool EpubReaderActivity::launchKOReaderSync() {
   LOG_DBG("KOSync", "Epub released (heap after: %u)", (unsigned)ESP.getFreeHeap());
 
   activityManager.replaceActivity(std::make_unique<KOReaderSyncActivity>(
-      renderer, mappedInput, savedEpubPath, localPos, std::move(localKoPos), std::move(localChapterName)));
+      renderer, mappedInput, savedEpubPath, localPos, std::move(localKoPos), std::move(localChapterName),
+      std::move(savedTitle)));
   return true;
 }
 

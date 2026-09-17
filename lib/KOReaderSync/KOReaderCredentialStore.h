@@ -9,6 +9,7 @@
 enum class DocumentMatchMethod : uint8_t {
   FILENAME = 0,  // Match by filename (simpler, works across different file sources)
   BINARY = 1,    // Match by partial MD5 of file content (more accurate, but files must be identical)
+  TITLE = 2,     // Match by metadata title (works across different filenames/formats)
 };
 
 // How manual "Sync Progress" resolves differences after fetching remote progress.
